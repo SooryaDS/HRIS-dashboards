@@ -2,7 +2,9 @@ import {
     Users,
     Wallet,
     TrendingUp,
-    Award
+    Award,
+    User2Icon,
+    Building2Icon
 } from "lucide-react";
 
 import {
@@ -10,6 +12,9 @@ import {
     Line,
     BarChart,
     Bar,
+    PieChart,
+    Pie,
+    Cell,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -19,64 +24,20 @@ import {
 
 import DashboardLayout from "../../layouts/DashboardLayout";
 import KpiCard from "../../components/dashboard/KpiCard";
-import FilterBar from "../../components/dashboard/FilterBar";
 import ChartCard from "../../components/dashboard/ChartCard";
 import DataTable from "../../components/dashboard/DataTable";
-import InsightsCard from "../../components/dashboard/InsightsCard";
+
+import attendanceBonusData from "../../data/attendanceBonus";
 
 
-const bonusTrendData = [
-    { month: "Apr", bonus: 38 },
-    { month: "May", bonus: 42 },
-    { month: "Jun", bonus: 40 },
-    { month: "Jul", bonus: 46 },
-    { month: "Aug", bonus: 49 },
-    { month: "Sep", bonus: 53 }
+const roleColors = [
+    "#2563eb",
+    "#1d4ed8",
+    "#5595e3"
 ];
 
 
-const bonusCenterData = [
-    { center: "Central", bonus: 14.2 },
-    { center: "Colombo", bonus: 11.8 },
-    { center: "Kandy", bonus: 9.6 },
-    { center: "Galle", bonus: 8.4 },
-    { center: "Negombo", bonus: 6.7 }
-];
-
-
-const thresholdEmployees = [
-    {
-        employee: "Soorya De Silva",
-        center: "Colombo",
-        attendance: "96%",
-        threshold: "95%",
-        status: "Qualified"
-    },
-    {
-        employee: "Lubna Janaan",
-        center: "Kandy",
-        attendance: "94%",
-        threshold: "95%",
-        status: "Near Threshold"
-    },
-    {
-        employee: "Yasashri Ponnamperuma",
-        center: "Galle",
-        attendance: "93%",
-        threshold: "95%",
-        status: "Near Threshold"
-    },
-    {
-        employee: "Menuri Kodikara",
-        center: "Central",
-        attendance: "97%",
-        threshold: "95%",
-        status: "Qualified"
-    }
-];
-
-
-const thresholdColumns = [
+const employeeBonusColumns = [
     {
         key: "employee",
         label: "Employee"
@@ -86,98 +47,253 @@ const thresholdColumns = [
         label: "Center"
     },
     {
-        key: "attendance",
-        label: "Attendance"
+        key: "role",
+        label: "Role"
     },
     {
-        key: "threshold",
-        label: "Threshold"
+        key: "attendance",
+        label: "Attendance %"
     },
     {
         key: "status",
-        label: "Status"
+        label: "Bonus Status"
+    },
+    {
+        key: "bonus",
+        label: "Bonus Amount"
     }
 ];
 
 
 function AttendanceBonus() {
 
+    const {
+        summary,
+        previousSummary,
+        bonusTrend,
+        bonusByCenter,
+        bonusEligibilityByRole,
+        roleQualification,
+        employees
+    } = attendanceBonusData;
+
+
+    // =====================================================
+    // INSIGHT CALCULATIONS
+    // =====================================================
+
+    // Bonus payout percentage change
+    const bonusChange =
+        previousSummary.bonusPaid !== 0
+            ? (
+                ((summary.bonusPaid -
+                    previousSummary.bonusPaid) /
+                    previousSummary.bonusPaid) *
+                100
+            ).toFixed(1)
+            : 0;
+
+
+    // Find Helper qualification data
+    const helperData = roleQualification.find(
+        (role) => role.role === "Helper"
+    );
+
+
+    // Helper qualification rate change in percentage points
+    const helperChange =
+        helperData
+            ? (
+                helperData.qualificationRate -
+                helperData.previousQualificationRate
+            ).toFixed(1)
+            : 0;
+
+
+    // Find the center with the highest current-year payout
+    const highestBonusCenter = bonusByCenter.reduce(
+        (highest, center) =>
+            center.thisYear > highest.thisYear
+                ? center
+                : highest,
+        bonusByCenter[0]
+    );
+
+
+    // Calculate that center's year-over-year growth
+    const centerGrowth =
+        highestBonusCenter.lastYear !== 0
+            ? (
+                ((highestBonusCenter.thisYear -
+                    highestBonusCenter.lastYear) /
+                    highestBonusCenter.lastYear) *
+                100
+            ).toFixed(0)
+            : 0;
+
+
     return (
         <DashboardLayout>
 
-            {/* Dashboard Header */}
+            {/* =====================================================
+                DASHBOARD HEADER
+            ===================================================== */}
 
             <div className="dashboard-header">
 
                 <div>
+
+                    <span className="dashboard-eyebrow">
+                        ENTERPRISE OUTLET STAFF
+                    </span>
 
                     <h1>
                         Attendance Bonus Dashboard
                     </h1>
 
                     <p>
-                        Attendance and bonus performance overview
+                        Primary Users: Manager, Cashier, Helper
                     </p>
+
+                </div>
+
+
+                <div className="dashboard-message">
+
+                    <span>
+                        “People create the possibilities.
+                        <br />
+                        We help you see them.”
+                    </span>
+
+                    <div className="message-divider"></div>
+
+                    <span>
+                        Smarter People Decisions
+                        <br />
+                        A Stronger Tomorrow
+                    </span>
 
                 </div>
 
             </div>
 
 
-            {/* Filters */}
-
-            <FilterBar />
-
-
-            {/* KPI Cards */}
+            {/* =====================================================
+                KPI CARDS
+            ===================================================== */}
 
             <div className="kpi-grid">
 
                 <KpiCard
                     title="Eligible Employees"
-                    value="1,248"
-                    subtitle="Employees eligible for bonus"
-                    icon={<Users size={19} />}
+                    value={summary.eligibleEmployees.toLocaleString()}
+                    currentValue={summary.eligibleEmployees}
+                    previousValue={previousSummary.eligibleEmployees}
+                    icon={<Users size={21} />}
                 />
+
 
                 <KpiCard
                     title="Bonus Paid This Month"
-                    value="Rs. 52.8M"
-                    subtitle="Total bonus paid"
-                    icon={<Wallet size={19} />}
+                    value={`Rs. ${(summary.bonusPaid / 1000).toFixed(1)}K`}
+                    currentValue={summary.bonusPaid}
+                    previousValue={previousSummary.bonusPaid}
+                    icon={<Wallet size={21} />}
                 />
+
 
                 <KpiCard
                     title="Average Bonus"
-                    value="Rs. 42,300"
-                    subtitle="Average per eligible employee"
-                    icon={<TrendingUp size={19} />}
+                    value={`Rs. ${summary.averageBonus.toFixed(2)}`}
+                    currentValue={summary.averageBonus}
+                    previousValue={previousSummary.averageBonus}
+                    icon={<TrendingUp size={21} />}
                 />
 
+
                 <KpiCard
-                    title="Qualification Rate"
-                    value="82.4%"
-                    subtitle="Qualified employees"
-                    icon={<Award size={19} />}
+                    title="Highest Bonus Center"
+                    value={summary.highestBonusCenter.name}
+                    subtitle={`Rs. ${summary.highestBonusCenter.amount}M`}
+                    icon={<Award size={21} />}
+                />
+
+
+                <KpiCard
+                    title="Bonus Qualification Rate"
+                    value={`${summary.qualificationRate}%`}
+                    currentValue={summary.qualificationRate}
+                    previousValue={previousSummary.qualificationRate}
+                    icon={<Award size={21} />}
+                />
+
+
+                <KpiCard
+                    title="Employees Near Threshold"
+                    value={summary.nearThreshold}
+                    currentValue={summary.nearThreshold}
+                    previousValue={previousSummary.nearThreshold}
+                    icon={<Users size={21} />}
                 />
 
             </div>
 
 
-            {/* Charts */}
+            {/* =====================================================
+                CHARTS
+            ===================================================== */}
 
             <div className="chart-grid">
 
-                {/* Bonus Trend */}
 
-                <ChartCard title="Bonus Trend">
+                {/* =================================================
+                    ATTENDANCE BONUS TREND
+                ================================================= */}
+
+                <ChartCard 
+                    title={
+                        <>
+                            <TrendingUp size={18}/>
+                            Attendance Bonus Trend
+                        </>
+                        }>
+
+                    <div className="chart-top-info">
+
+                        <span>
+                            Total attendance bonus paid over time
+                        </span>
+
+                        <div className="chart-period-change">
+
+                            <strong>
+                                +{bonusChange}%
+                            </strong>
+
+                            <small>
+                                vs. Jan 2024
+                            </small>
+
+                        </div>
+
+                    </div>
+
 
                     <ResponsiveContainer
                         width="100%"
                         height="100%"
                     >
 
-                        <LineChart data={bonusTrendData}>
+                        <LineChart
+                            data={bonusTrend}
+                            margin={{
+                                top: 15,
+                                right: 10,
+                                left: -45,
+                                bottom: 35
+                            }}
+                        >
 
                             <CartesianGrid
                                 strokeDasharray="3 3"
@@ -187,16 +303,30 @@ function AttendanceBonus() {
                                 dataKey="month"
                             />
 
-                            <YAxis />
+                            <YAxis
+                                tickFormatter={(value) =>
+                                    `${value}K`
+                                }
+                            />
 
-                            <Tooltip />
+                            <Tooltip
+                                formatter={(value) => [
+                                    `${value}K`,
+                                    "Bonus"
+                                ]}
+                            />
 
                             <Line
                                 type="monotone"
                                 dataKey="bonus"
                                 stroke="#2563eb"
                                 strokeWidth={3}
-                                dot={{ r: 4 }}
+                                dot={{
+                                    r: 4,
+                                    fill: "#ffffff",
+                                    stroke: "#2563eb",
+                                    strokeWidth: 3
+                                }}
                             />
 
                         </LineChart>
@@ -206,16 +336,34 @@ function AttendanceBonus() {
                 </ChartCard>
 
 
-                {/* Bonus by Center */}
+                {/* =================================================
+                    BONUS PAYOUT BY CENTER
+                ================================================= */}
 
-                <ChartCard title="Bonus by Center">
+                <ChartCard                    
+                    title={
+                        <>
+                        <Building2Icon size={18} />
+                        Bonus Payout by Center (Top 5)
+                        </>
+                    }
+                    >
 
                     <ResponsiveContainer
                         width="100%"
                         height="100%"
                     >
 
-                        <BarChart data={bonusCenterData}>
+                        <BarChart
+                            data={bonusByCenter}
+                            margin={{
+                                top: 25,
+                                right: 5,
+                                left: -40,
+                                bottom: 5
+                            }}
+                            barGap={4}
+                        >
 
                             <CartesianGrid
                                 strokeDasharray="3 3"
@@ -223,14 +371,32 @@ function AttendanceBonus() {
 
                             <XAxis
                                 dataKey="center"
+                                tick={{ fontSize: 10 }}
                             />
 
-                            <YAxis />
+                            <YAxis
+                                tickFormatter={(value) =>
+                                    `${value}K`
+                                }
+                            />
 
-                            <Tooltip />
+                            <Tooltip
+                                formatter={(value) => [
+                                    `${value}K`,
+                                    "Bonus"
+                                ]}
+                            />
 
                             <Bar
-                                dataKey="bonus"
+                                dataKey="lastYear"
+                                name="Last Year"
+                                fill="#93c5fd"
+                                radius={[5, 5, 0, 0]}
+                            />
+
+                            <Bar
+                                dataKey="thisYear"
+                                name="This Year"
                                 fill="#2563eb"
                                 radius={[5, 5, 0, 0]}
                             />
@@ -241,37 +407,341 @@ function AttendanceBonus() {
 
                 </ChartCard>
 
+
+                {/* =================================================
+                    BONUS ELIGIBILITY BY ROLE
+                ================================================= */}
+
+                <ChartCard
+                     title={
+                        <>
+                            <Users size={18} />
+                             Bonus Eligibility by Role
+                        </>
+                        }>
+
+                    <div className="role-chart">
+
+                        <div className="role-donut">
+
+                            <ResponsiveContainer
+                                width="100%"
+                                height="100%"
+                            >
+
+                                <PieChart>
+
+                                    <Pie
+                                        data={bonusEligibilityByRole}
+                                        dataKey="employees"
+                                        nameKey="role"
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={55}
+                                        outerRadius={82}
+                                        paddingAngle={2}
+                                        stroke="white"
+                                        strokeWidth={2}
+                                    >
+
+                                        {bonusEligibilityByRole.map(
+                                            (entry, index) => (
+
+                                                <Cell
+                                                    key={`cell-${index}`}
+                                                    fill={
+                                                        roleColors[index]
+                                                    }
+                                                />
+
+                                            )
+                                        )}
+
+                                    </Pie>
+
+                                </PieChart>
+
+                            </ResponsiveContainer>
+
+
+                            <div className="donut-center">
+
+                                <strong>
+                                    {summary.eligibleEmployees.toLocaleString()}
+                                </strong>
+
+                                <span>
+                                    Eligible
+                                </span>
+
+                                <span>
+                                    Employees
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <div className="role-legend">
+
+                            {bonusEligibilityByRole.map(
+                                (item, index) => (
+
+                                    <div
+                                        className="role-legend-item"
+                                        key={item.role}
+                                    >
+
+                                        <div className="role-legend-left">
+
+                                            <span
+                                                className="role-dot"
+                                                style={{
+                                                    backgroundColor:
+                                                        roleColors[index]
+                                                }}
+                                            >
+                                            </span>
+
+
+                                            <div className="role-legend-text">
+
+                                                <span className="role-name">
+                                                    {item.role}
+                                                </span>
+
+                                                <span className="role-value">
+                                                    {item.percentage}% (
+                                                    {item.employees}
+                                                    )
+                                                </span>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                )
+                            )}
+
+                        </div>
+
+                    </div>
+
+                </ChartCard>
+
             </div>
 
 
-            {/* Employees Near Threshold */}
+            {/* =====================================================
+                BOTTOM SECTION
+            ===================================================== */}
 
-            <div className="table-card">
+            <div className="bottom-dashboard-grid">
 
-                <div className="table-card-header">
 
-                    <h3>
-                        Employees Near Bonus Threshold
-                    </h3>
+                {/* =================================================
+                    EMPLOYEE ATTENDANCE BONUS DETAILS
+                ================================================= */}
+
+                <div className="table-card">
+
+                    <div className="section-card-header">
+
+                        <div>
+
+                            <h3>
+                                Employee Attendance Bonus Details
+                            </h3>
+
+                            <p>
+                                Employee-level attendance and bonus qualification details
+                            </p>
+
+                        </div>
+
+
+                        <button className="view-all-button">
+                            View All
+                        </button>
+
+                    </div>
+
+
+                    <DataTable
+                        columns={employeeBonusColumns}
+                        data={employees}
+                    />
 
                 </div>
 
-                <DataTable
-                    columns={thresholdColumns}
-                    data={thresholdEmployees}
-                />
+
+                {/* =================================================
+                    INSIGHTS & ACTIONS
+                ================================================= */}
+
+                <div className="actions-card">
+
+                    <div className="section-card-header">
+
+                        <h3>
+                            Insights & Actions
+                        </h3>
+
+                        <button className="view-all-button">
+                            View All
+                        </button>
+
+                    </div>
+
+
+                    {/* =================================================
+                        INSIGHT 1 - BONUS PAYOUT
+                    ================================================= */}
+
+                    <div className="action-item">
+
+                        <div className="action-icon positive">
+                            ↗
+                        </div>
+
+
+                        <div>
+
+                            <h4>
+                                Bonus payout up {bonusChange}% this month
+                            </h4>
+
+                            <p>
+                                Total attendance bonuses increased from
+                                Rs.{" "}
+                                {(previousSummary.bonusPaid / 1000).toFixed(1)}
+                                K
+                                {" "}to{" "}
+                                Rs.{" "}
+                                {(summary.bonusPaid / 1000).toFixed(1)}
+                                K,
+                                driven by higher qualification rates.
+                            </p>
+
+                        </div>
+
+
+                        <span className="action-arrow">
+                            ›
+                        </span>
+
+                    </div>
+
+
+                    {/* =================================================
+                        INSIGHT 2 - HELPER ATTENTION
+                    ================================================= */}
+
+                    <div className="action-item">
+
+                        <div className="action-icon negative">
+                            ↘
+                        </div>
+
+
+                        <div>
+
+                            <h4>
+                                Helpers need attention
+                            </h4>
+
+
+                            <p>
+                                Helper bonus qualification rate declined by{" "}
+                                {Math.abs(helperChange)}
+                                {" "}percentage points.
+                                Consider additional attendance support.
+                            </p>
+
+                        </div>
+
+
+                        <span className="action-arrow">
+                            ›
+                        </span>
+
+                    </div>
+
+
+                    {/* =================================================
+                        INSIGHT 3 - HIGHEST BONUS CENTER
+                    ================================================= */}
+
+                    <div className="action-item">
+
+                        <div className="action-icon target">
+                            ◎
+                        </div>
+
+
+                        <div>
+
+                            <h4>
+                                {highestBonusCenter.center} leads in bonus payout
+                            </h4>
+
+
+                            <p>
+                                Payout is{" "}
+                                {centerGrowth}%
+                                {" "}higher than last year.
+                                Great attendance consistency from the team.
+                            </p>
+
+                        </div>
+
+
+                        <span className="action-arrow">
+                            ›
+                        </span>
+
+                    </div>
+
+
+                    {/* =================================================
+                        INSIGHT 4 - NEAR THRESHOLD
+                    ================================================= */}
+
+                    <div className="action-item">
+
+                        <div className="action-icon settings">
+                            ⚙
+                        </div>
+
+
+                        <div>
+
+                            <h4>
+                                Focus on near-threshold employees
+                            </h4>
+
+
+                            <p>
+                                {summary.nearThreshold} employees are within
+                                5% of the bonus qualification threshold.
+                                Consider targeted reminders and engagement.
+                            </p>
+
+                        </div>
+
+
+                        <span className="action-arrow">
+                            ›
+                        </span>
+
+                    </div>
+
+                </div>
 
             </div>
-
-
-            {/* Highest Bonus Center */}
-
-            <InsightsCard
-                title="Highest Bonus Center"
-                value="Central Center"
-                description="Central recorded the highest total bonus payout at Rs. 14.2M."
-            />
-
 
         </DashboardLayout>
     );
